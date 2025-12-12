@@ -1,26 +1,24 @@
 const express = require('express');
 const axios = require('axios');
 const cheerio = require('cheerio');
+const cors = require('cors'); // import cors
 
 const app = express();
 const PORT = 3000;
 
-// Route to get players by tournament ID
-app.get('/tournament/:id/:round', async (req, res) => {
-    const { id , round } = req.params;
-    console.log(id)
-    const url = `https://swissonlinetournament.com/Tournament/Details/${id}?round=${round}`;
+// Enable CORS for all routes
+app.use(cors());
 
-    const headers = {
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
-        "Accept-Language": "en-US,en;q=0.9",
-        "Cache-Control": "max-age=0",
-        "Connection": "keep-alive",
-        "Upgrade-Insecure-Requests": "1",
-        "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36",
-    };
+app.get('/tournament/:id/:round', async (req, res) => {
+    const { id, round } = req.params;
 
     try {
+        const url = `https://swissonlinetournament.com/Tournament/Details/${id}?round=${round}`;
+        const headers = {
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+            "User-Agent": "Mozilla/5.0"
+        };
+
         const response = await axios.get(url, { headers });
         const $ = cheerio.load(response.data);
 
@@ -32,9 +30,12 @@ app.get('/tournament/:id/:round', async (req, res) => {
             players.push({ player1, player2 });
         });
 
-        res.json(players);
-    } catch (error) {
-        console.error(error);
+        // Count number of rounds
+        const numberOfRounds = $('a[href*="round="]').length;
+
+        res.json({ numberOfRounds, players });
+    } catch (err) {
+        console.error(err);
         res.status(500).json({ error: 'Failed to fetch tournament data' });
     }
 });
